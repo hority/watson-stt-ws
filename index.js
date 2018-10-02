@@ -72,7 +72,7 @@ var SttWs = (function(){
             "action": "start",
             "content-type": "audio/l16;rate=22050"
         };
-        this.send(JSON.stringify(message));
+        evt.target.send(JSON.stringify(message));
     }
 
     function onMessage(evt) {
