@@ -86,7 +86,7 @@ var SttWs = (function () {
 
     SttWs.prototype.send = function (blob) {
         this.websocket.send(blob);
-        this.websocket.send(JSON.stringify({ "aciton": "stop" }));
+        this.websocket.send(JSON.stringify({ "action": "stop" }));
     };
 
     function onOpen(evt) {
