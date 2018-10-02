@@ -88,6 +88,7 @@ var SttWs = (function(){
         console.log(evt.data);
     }
 
+    return SttWs;
 })();
 
 document.getElementById("open").addEventListener("click", function () {
