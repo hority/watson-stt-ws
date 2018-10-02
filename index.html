@@ -9,16 +9,17 @@
 
 <body>
     <div>
-        <p>Your Access Token:</p><input id="token" type="text"/>
+        <span>Password:</span><input id="token" type="text"/>
         <button id="open">Open</button>
     </div>
     <div>
-        <button id="toggle">Start</button>
+        <span>Listening:</span><button id="toggle">Start</button>
     </div>
     <div>
         <p>Log:</p>
         <pre id="log"></pre>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"></script>
     <script src="./index.js"></script>
 </body>
 </html>
