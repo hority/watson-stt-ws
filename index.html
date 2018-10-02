@@ -9,29 +9,16 @@
 
 <body>
     <div>
-        <p>Step 1. </p>
-        <p>Username:</p>
-        <input id="username" type="text" />
-        <p>Password:</p>
-        <input id="password" type="password" />
-        <button id="step1">Get A Token</button>
-        <p>Your Access Token:</p><span id="token">-</span>
+        <p>Your Access Token:</p><input id="token" type="text"/>
+        <button id="open">Open</button>
+    </div>
+    <div>
+        <button id="toggle">Start</button>
+    </div>
+    <div>
+        <p>Log:</p>
+        <pre id="log"></pre>
     </div>
     <script src="./index.js"></script>
-    <script>
-        document.getElementById('step1').addEventListener('click',function(){
-            var username = document.getElementById("username").value;
-            var password = document.getElementById("password").value;
-            var stt_url = "https://stream.watsonplatform.net/speech-to-text/api";
-            var url = "https://stream.watsonplatform.net/authorization/api/v1/token?url=" + stt_url;
-            var request = new XMLHttpRequest();
-            request.withCredentials = true;
-            request.addEventListener('load',function(){
-                document.getElementById("token").innerText = request.responseText;
-            });
-            request.open("GET", url, true, username, password);
-            request.send();
-        });
-    </script>
 </body>
 </html>
