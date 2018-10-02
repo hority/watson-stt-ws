@@ -72,7 +72,7 @@ var SttWs = (function(){
             "action": "start",
             "content-type": "audio/l16;rate=22050"
         };
-        this.websocket.send(JSON.stringify(message));
+        this.send(JSON.stringify(message));
     }
 
     function onMessage(evt) {
