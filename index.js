@@ -91,11 +91,16 @@ var SttWs = (function(){
     return SttWs;
 })();
 
+var adapter = null;
+
 document.getElementById("open").addEventListener("click", function () {
     var token = document.getElementById("token").value;
     var sttws = new SttWs(token);
-    var adapter = new Adapter(sttws);
-    document.getElementById("toggle").addEventListener("click",function(){
+    adapter = new Adapter(sttws);
+});
+
+document.getElementById("toggle").addEventListener("click",function(){
+    if(adapter){
         adapter.toggle();
-    });
+    }
 });
