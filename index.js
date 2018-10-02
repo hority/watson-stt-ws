@@ -32,7 +32,7 @@ var Adapter = (function () {
         return buf.buffer
     };
 
-    var handleSuccess = function (stream) {
+    Adapter.prototype.handleSuccess = function (stream) {
         var self = this;
         var AudioContext = window.AudioContext || window.webkitAudioContext;
         var context = new AudioContext();
@@ -56,7 +56,7 @@ var Adapter = (function () {
             this.listening = false;
         } else {
             if (!this.initialized) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(handleSuccess).catch(function (reason) {
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(this.handleSuccess).catch(function (reason) {
                     document.getElementById("log").innerHTML += reason + "\n";
                 });
                 this.initialized = true;
