@@ -74,28 +74,50 @@ var Adapter = (function () {
 
 var SttWs = (function () {
     var SttWs = function (token) {
-        var wsURI = "wss://stream.watsonplatform.net/speech-to-text/api/v1/recognize"
+        this.wsURI = "wss://stream.watsonplatform.net/speech-to-text/api/v1/recognize"
             + "?watson-token=" + token
             + "&model=es-ES_BroadbandModel";
-        this.websocket = new WebSocket(wsURI);
-        this.websocket.onopen = function (evt) { onOpen(evt) };
-        this.websocket.onclose = function (evt) { onClose(evt) };
-        this.websocket.onmessage = function (evt) { onMessage(evt) };
-        this.websocket.onerror = function (evt) { onError(evt) };
+        this.websocket = null;
+        this.listening = false;
+        this.open();
     };
 
     SttWs.prototype.send = function (blob) {
+        if(!this.listening){
+            this.open();
+        }
         this.websocket.send(blob);
-        this.websocket.send(JSON.stringify({ "action": "stop" }));
     };
 
-    function onOpen(evt) {
+    SttWs.prototype.stop = function(){
+        this.websocket.send(JSON.stringify({ "action": "stop" }));
+        this.listening = false;
+    };
+
+    SttWs.prototype.open = function(){
+        var that = this;
         var message = {
             "action": "start",
             "content-type": "audio/l16;rate=22050"
         };
-        evt.target.send(JSON.stringify(message));
-    }
+        if(!this.websocket){
+            this.websocket = new WebSocket(this.wsURI);
+            this.websocket.onopen = function (evt) {
+                that.websocket.send(JSON.stringify(message));
+                that.listening = true;
+            };
+            this.websocket.onclose = function (evt) { 
+                console.log(evt.data);
+                document.getElementById("log").innerHTML += evt.data + "\n";
+                that.websocket = null;
+                that.listening = false;
+            };
+            this.websocket.onmessage = function (evt) { onMessage(evt) };
+            this.websocket.onerror = function (evt) { onError(evt) };
+        } else {
+            this.listening = true;
+        }
+    };
 
     function onMessage(evt) {
         console.log(evt.data);
@@ -103,11 +125,6 @@ var SttWs = (function () {
     }
 
     function onError(evt) {
-        console.log(evt.data);
-        document.getElementById("log").innerHTML += evt.data + "\n";
-    }
-
-    function onClose(evt) {
         console.log(evt.data);
         document.getElementById("log").innerHTML += evt.data + "\n";
     }
