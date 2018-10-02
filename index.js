@@ -33,15 +33,16 @@ var Adapter = (function () {
     };
 
     var handleSuccess = function (stream) {
+        var self = this;
         var AudioContext = window.AudioContext || window.webkitAudioContext;
         var context = new AudioContext();
         var input = context.createMediaStreamSource(stream)
         var processor = context.createScriptProcessor(1024, 1, 1);
 
         processor.onaudioprocess = function (e) {
-            if (listening) {
+            if (self.listening) {
                 var voice = e.inputBuffer.getChannelData(0);
-                this.sttws.send(convertoFloat32ToInt16(voice));
+                self.sttws.send(convertoFloat32ToInt16(voice));
             }
         };
 
