@@ -95,7 +95,7 @@ document.getElementById("open").addEventListener("click", function () {
     var token = document.getElementById("token").value;
     var sttws = new SttWs(token);
     var adapter = new Adapter(sttws);
-    documeng.getElementById("toggle").addEventListener("click",function(){
+    document.getElementById("toggle").addEventListener("click",function(){
         adapter.toggle();
     });
 });
