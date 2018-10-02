@@ -101,10 +101,12 @@ var SttWs = (function () {
 
     function onError(evt) {
         console.log(evt.data);
+        document.getElementById("log").innerHTML += evt.data + "\n";
     }
 
     function onClose(evt) {
         console.log(evt.data);
+        document.getElementById("log").innerHTML += evt.data + "\n";
     }
 
     return SttWs;
@@ -113,11 +115,15 @@ var SttWs = (function () {
 var adapter = null;
 
 document.getElementById("open").addEventListener("click", function () {
-    var key = document.getElementById("token").value;
-    var cryptor = new Cryptor();
-    var token = cryptor.decrypt(Cryptor.encrypted, key);
-    var sttws = new SttWs(token);
-    adapter = new Adapter(sttws);
+    try{
+        var key = document.getElementById("token").value;
+        var cryptor = new Cryptor();
+        var token = cryptor.decrypt(Cryptor.encrypted, key);
+        var sttws = new SttWs(token);
+        adapter = new Adapter(sttws);
+    } catch (e) {
+        document.getElementById("log").innerHTML += e + "\n";
+    }
 });
 
 document.getElementById("toggle").addEventListener("click", function () {
