@@ -77,7 +77,7 @@ var SttWs = (function () {
     var SttWs = function (token) {
         this.wsURI = "wss://stream.watsonplatform.net/speech-to-text/api/v1/recognize"
             + "?watson-token=" + token
-            + "&model=es-ES_BroadbandModel";
+            + "&model=ja-JP_BroadbandModel";
         this.websocket = null;
         this.listening = false;
         this.open();
