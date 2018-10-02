@@ -33,16 +33,16 @@ var Adapter = (function () {
     };
 
     Adapter.prototype.handleSuccess = function (stream) {
-        var self = this;
+        var that = this;
         var AudioContext = window.AudioContext || window.webkitAudioContext;
         var context = new AudioContext();
         var input = context.createMediaStreamSource(stream)
         var processor = context.createScriptProcessor(1024, 1, 1);
 
         processor.onaudioprocess = function (e) {
-            if (self.listening) {
+            if (that.listening) {
                 var voice = e.inputBuffer.getChannelData(0);
-                self.sttws.send(convertoFloat32ToInt16(voice));
+                that.sttws.send(convertoFloat32ToInt16(voice));
             }
         };
 
@@ -51,12 +51,15 @@ var Adapter = (function () {
     };
 
     Adapter.prototype.toggle = function () {
+        var that = this;
         if (this.listening) {
             document.getElementById("toggle").innerHTML = "Start";
             this.listening = false;
         } else {
             if (!this.initialized) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(this.handleSuccess).catch(function (reason) {
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream){
+                    that.handleSuccess(stream);
+                }).catch(function (reason) {
                     document.getElementById("log").innerHTML += reason + "\n";
                 });
                 this.initialized = true;
