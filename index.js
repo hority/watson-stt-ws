@@ -1,38 +1,45 @@
-var Cryptor = (function () {
-    var Cryptor = function () {
+var Logger = (function(){
+    var Logger = function(){
     };
 
-    Cryptor.encrypted = "";
-
-    Cryptor.prototype.encrypt = function (plaintext, key) {
-        return CryptoJS.AES.encrypt(plaintext, key).toString();
+    Logger.prototype.log = function(msg){
+        console.log(msg);
+        document.getElementById("log").innerHTML += msg + "\n";
     };
 
-    Cryptor.prototype.decrypt = function (ciphertext, key) {
-        return CryptoJS.AES.decrypt(ciphertext, key).toString(CryptoJS.enc.Utf8);
-    };
-
-    return Cryptor;
+    return Logger;
 })();
 
-var Adapter = (function () {
-    var Adapter = function (sttws) {
-        this.initialized = false;
-        this.listening = false;
-        this.sttws = sttws;
+var Listener = (function(){
+
+    var Listener = function(speechToText,stateChanged,logger){
+        var that = this;
+        this.state = Listener.INITIALIZING;
+        this.speechToText = speechToText;
+        this.stateChanged = stateChanged;
+        this.logger = logger;
+
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream){
+            that.onGetUserMediaComplete(stream);
+        }).catch(function (reason) {
+            that.onError(reason);
+        });
     };
+    
+    Listener.INITIALIZING = 0;
+    Listener.INITIALIZED = 1;
+    Listener.LISTENING = 2;
 
-    var convertoFloat32ToInt16 = function (buffer) {
+    Listener.prototype.convertoFloat32ToInt16 = function (buffer) {
         var l = buffer.length;
-        var buf = new Int16Array(l)
-
+        var buf = new Int16Array(l);
         while (l--) {
-            buf[l] = buffer[l] * 0xFFFF;    //convert to 16 bit
+            buf[l] = buffer[l] * 0xFFFF;
         }
         return buf.buffer
     };
 
-    Adapter.prototype.handleSuccess = function (stream) {
+    Listener.prototype.onGetUserMediaComplete = function (stream) {
         var that = this;
         var AudioContext = window.AudioContext || window.webkitAudioContext;
         var context = new AudioContext();
@@ -40,119 +47,155 @@ var Adapter = (function () {
         var processor = context.createScriptProcessor(1024, 1, 1);
 
         processor.onaudioprocess = function (e) {
-            if (that.listening) {
+            if (that.state === Listener.LISTENING) {
                 var voice = e.inputBuffer.getChannelData(0);
-                that.sttws.send(convertoFloat32ToInt16(voice));
+                voice = that.convertoFloat32ToInt16(voice);
+                that.speechToText.send(voice);
             }
         };
 
         input.connect(processor);
         processor.connect(context.destination);
+        that.setState(Listener.INITIALIZED);
     };
 
-    Adapter.prototype.toggle = function () {
-        var that = this;
-        if (this.listening) {
-            document.getElementById("toggle").innerHTML = "Start";
-            this.listening = false;
-            this.sttws.stop();
-        } else {
-            if (!this.initialized) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream){
-                    that.handleSuccess(stream);
-                }).catch(function (reason) {
-                    document.getElementById("log").innerHTML += reason + "\n";
-                });
-                this.initialized = true;
-            }
-            document.getElementById("toggle").innerHTML = "Stop";
-            this.listening = true;
+    Listener.prototype.setState = function(val){
+        if(this.state !== val){
+            this.state = val;
+            this.onStateChanged();
         }
     };
 
-    return Adapter;
+    Listener.prototype.start = function(){
+        if(this.state === Listener.INITIALIZED){
+            this.setState(Listener.LISTENING);
+        } else {
+            this.onError("Listener is not initialized.");
+        }
+    };
+
+    Listener.prototype.stop = function(){
+        if(this.state === Listener.LISTENING){
+            this.speechToText.stop();
+            this.setState(Listener.INITIALIZED);
+        }
+    };
+
+    Listener.prototype.onStateChanged = function(){
+        if(this.stateChanged){
+            this.stateChanged();
+        }
+    };
+
+    Listener.prototype.onError = function(msg){
+        this.logger.log(msg);
+    };
+
+    return Listener;
 })();
 
-var SttWs = (function () {
-    var SttWs = function (token) {
+var SpeechToText = (function () {
+    var SpeechToText = function (token,logger) {
         this.wsURI = "wss://stream.watsonplatform.net/speech-to-text/api/v1/recognize"
             + "?watson-token=" + token
             + "&model=ja-JP_BroadbandModel";
         this.websocket = null;
-        this.listening = false;
-        this.open();
+        this.logger = logger;
+        this.isopening = false;
     };
 
-    SttWs.prototype.send = function (blob) {
-        if(!this.listening){
-            this.open();
-        }
-        if(this.websocket.readyState === 1){
-            this.websocket.send(blob);
+    SpeechToText.prototype.open = function(blob){
+        if(!this.isopening){
+            this.close();
+            this.isopening = true;
+            var that = this;
+            this.websocket = new WebSocket(this.wsURI);
+            this.websocket.onopen = function(){
+                that.start();
+                if(blob){
+                    that.send(blob);
+                }
+                that.isopening = false;
+                that.logger.log("WebSocket connection is opened.");
+            };
+            this.websocket.onmessage = function(evt){
+                that.onMessage(evt);
+            };
+            this.websocket.onerror = function(evt){
+                that.onError("WebSocket connection error.");
+            };
+            this.websocket.onclose = function(evt){
+                that.onClose("WebSocket connection is closed.");
+            };
         }
     };
 
-    SttWs.prototype.stop = function(){
-        this.websocket.send(JSON.stringify({ "action": "stop" }));
-        this.listening = false;
-        this.websocket.close();
+    SpeechToText.prototype.close = function(){
+        if(this.websocket && this.websocket.readyState === 1) {
+            this.websocket.close();
+        }
         this.websocket = null;
-    };
+        this.isopening = false;
+    }
 
-    SttWs.prototype.open = function(){
-        var that = this;
-        var message = {
+    SpeechToText.prototype.start = function(){
+        this.websocket.send(JSON.stringify({
             "action": "start",
             "content-type": "audio/l16;rate=22050"
-        };
-        if(!this.websocket){
-            this.websocket = new WebSocket(this.wsURI);
-            this.websocket.onopen = function (evt) {
-                that.websocket.send(JSON.stringify(message));
-                that.listening = true;
-            };
-            this.websocket.onclose = function (evt) { 
-                console.log(evt.data);
-                document.getElementById("log").innerHTML += evt.data + "\n";
-                that.websocket = null;
-                that.listening = false;
-            };
-            this.websocket.onmessage = function (evt) { onMessage(evt) };
-            this.websocket.onerror = function (evt) { onError(evt) };
+        }));
+    };
+
+    SpeechToText.prototype.send = function (blob) {
+        var that = this;
+        if(this.websocket && this.websocket.readyState === 1) {
+            this.websocket.send(blob);
         } else {
-            this.listening = true;
+            this.open(blob);
         }
     };
 
-    function onMessage(evt) {
-        console.log(evt.data);
-        document.getElementById("log").innerHTML += evt.data + "\n";
-    }
+    SpeechToText.prototype.stop = function(){
+        if(this.websocket && this.websocket.readyState === 1) {
+            this.websocket.send(JSON.stringify({ "action": "stop" }));
+        }
+    };
 
-    function onError(evt) {
-        console.log(evt.data);
-        document.getElementById("log").innerHTML += evt.data + "\n";
-    }
+    SpeechToText.prototype.onMessage = function(evt) {
+        this.logger.log(evt.data);
+    };
 
-    return SttWs;
+    SpeechToText.prototype.onError = function(msg) {
+        this.logger.log(msg);
+        this.close();
+    };
+
+    SpeechToText.prototype.onClose = function(msg) {
+        this.logger.log(msg);
+        this.close();
+    };
+
+    return SpeechToText;
 })();
 
-var adapter = null;
+var logger = new Logger();
+var listener = null;
 
 document.getElementById("open").addEventListener("click", function () {
-    try{
-        var key = document.getElementById("token").value;
-        //var cryptor = new Cryptor();
-        //var token = cryptor.decrypt(Cryptor.encrypted, key);
-        var sttws = new SttWs(key);
-        adapter = new Adapter(sttws);
-    } catch (e) {
-        document.getElementById("log").innerHTML += e + "\n";
-    }
+    var key = document.getElementById("token").value;
+    var stt = new SpeechToText(key,logger);
+    listener = new Listener(stt,function(){},logger);
 });
 
 document.getElementById("toggle").addEventListener("click", function () {
-    if (adapter) {
-        adapter.toggle();
+    try{
+        if (listener.state === Listener.LISTENING) {
+            listener.stop();
+            document.getElementById("toggle").innerHTML = "START";
+        } else if(listener.state === Listener.INITIALIZED){
+            listener.start();
+            document.getElementById("toggle").innerHTML = "STOP";
+        }
+    } catch (e){
+        logger.log(e);
     }
 });
