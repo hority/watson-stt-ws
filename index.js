@@ -32,9 +32,11 @@ var Listener = (function(){
 
     Listener.prototype.convertoFloat32ToInt16 = function (buffer) {
         var l = buffer.length;
-        var buf = new Int16Array(l);
+        var buf = new Int16Array(l/2);
         while (l--) {
-            buf[l] = buffer[l] * 0xFFFF;
+            if(l%2==0){
+                buf[l/2] = buffer[l] * 0xFFFF;
+            }
         }
         return buf.buffer
     };
