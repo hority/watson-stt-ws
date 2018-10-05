@@ -47,7 +47,7 @@ var Listener = (function () {
     Listener.prototype.detectSilence = function (
         stream,
         silence_delay = 5000,
-        min_decibels = -80
+        min_decibels = 50
     ) {
         var that = this;
         const ctx = new AudioContext();
