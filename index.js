@@ -20,6 +20,7 @@ var Listener = (function () {
         this.speechToText = speechToText;
         this.stateChanged = stateChanged;
         this.logger = logger;
+        this.silence_start = performance.now();
 
         navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function (stream) {
             that.detectSilence(stream);
@@ -57,7 +58,6 @@ var Listener = (function () {
         analyser.minDecibels = min_decibels;
 
         const data = new Uint8Array(analyser.frequencyBinCount); // will hold our data
-        let silence_start = performance.now();
         let triggered = false; // trigger only once per silence event
 
         function loop(time) {
@@ -68,9 +68,9 @@ var Listener = (function () {
                     that.logger.log("Speaking detected.");
                     that.start();
                 }
-                silence_start = time; // set it to now
+                that.silence_start = time; // set it to now
             }
-            if (that.state == Listener.LISTENING && time - silence_start > silence_delay) {
+            if (that.state == Listener.LISTENING && time - that.silence_start > silence_delay) {
                 that.logger.log("Silence detected.");
                 that.stop();
             }
@@ -108,6 +108,7 @@ var Listener = (function () {
     Listener.prototype.start = function () {
         if (this.state === Listener.INITIALIZED) {
             this.setState(Listener.LISTENING);
+            this.silence_start = performance.now();
         } else {
             this.onError("Listener is not initialized.");
         }
